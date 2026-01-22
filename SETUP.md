@@ -36,9 +36,10 @@ Before you begin, make sure you have the following installed:
 
 5. **Configure Bot Permissions**
    - Scroll down to "Privileged Gateway Intents"
-   - Enable "MESSAGE CONTENT INTENT" (required for reading messages)
+   - **REQUIRED**: Enable "MESSAGE CONTENT INTENT" (critical for reading message content and processing commands)
    - Enable "SERVER MEMBERS INTENT" (optional, for member information)
    - Click "Save Changes"
+   - **Note**: Without MESSAGE CONTENT INTENT, the bot will not be able to read or respond to commands!
 
 ## Step 2: Invite Your Bot to Your Server
 

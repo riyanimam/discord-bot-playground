@@ -43,8 +43,8 @@ func main() {
 	// Register the ready handler
 	dg.AddHandler(ready)
 
-	// We need information about guilds (servers) and messages
-	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuilds
+	// We need information about guilds (servers), messages, and message content
+	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsGuilds | discordgo.IntentsMessageContent
 
 	// Open a websocket connection to Discord
 	err = dg.Open()
@@ -65,7 +65,7 @@ func main() {
 
 // ready is called when the bot successfully connects to Discord
 func ready(s *discordgo.Session, event *discordgo.Ready) {
-	log.Printf("Bot is ready! Logged in as: %s#%s", event.User.Username, event.User.Discriminator)
+	log.Printf("Bot is ready! Logged in as: %s", event.User.String())
 	log.Printf("Bot is in %d guilds", len(event.Guilds))
 
 	// Set the bot's status
@@ -274,7 +274,7 @@ func handleUserInfo(s *discordgo.Session, m *discordgo.MessageCreate, args []str
 	}
 
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("👤 %s#%s", targetUser.Username, targetUser.Discriminator),
+		Title:       fmt.Sprintf("👤 %s", targetUser.String()),
 		Description: "User Information",
 		Color:       0x9b59b6,
 		Thumbnail: &discordgo.MessageEmbedThumbnail{
