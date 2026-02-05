@@ -31,9 +31,6 @@ func init() {
 	if botPrefix == "" {
 		botPrefix = "!" // Default prefix
 	}
-
-	// Seed random number generator for fun commands
-	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
@@ -534,7 +531,7 @@ func handlePoll(s *discordgo.Session, m *discordgo.MessageCreate, args []string)
 
 	question := strings.TrimSpace(parts[0])
 	options := make([]string, 0)
-	for i := 1; i < len(parts) && i <= 10; i++ {
+	for i := 1; i < len(parts); i++ {
 		option := strings.TrimSpace(parts[i])
 		if option != "" {
 			options = append(options, option)
@@ -572,6 +569,7 @@ func handlePoll(s *discordgo.Session, m *discordgo.MessageCreate, args []string)
 
 	msg, err := s.ChannelMessageSendEmbed(m.ChannelID, embed)
 	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "Failed to create poll. Please try again.")
 		return
 	}
 
