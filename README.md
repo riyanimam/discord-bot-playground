@@ -9,6 +9,11 @@ A simple yet feature-rich Discord bot written in **Go (Golang)** using the [Disc
 - ℹ️ **Info command** - Bot information
 - 🏰 **Server info** - Display server details
 - 👤 **User info** - Show user information
+- 🖼️ **Avatar command** - Display user avatars in full resolution
+- 🎱 **Magic 8-Ball** - Ask questions and get mystical answers
+- 🎲 **Dice roller** - Roll dice with standard notation (e.g., 2d6, 1d20)
+- 🪙 **Coin flip** - Flip a coin for quick decisions
+- 📊 **Poll creator** - Create interactive polls with emoji reactions
 - 🎨 **Rich embeds** - Beautiful embedded messages
 - ⚡ **Fast and efficient** - Written in Go
 - 🔧 **Easy to configure** - Simple environment variable setup
@@ -60,13 +65,46 @@ Please see **[SETUP.md](SETUP.md)** for the full guide.
 
 All commands use the `!` prefix by default (configurable):
 
+### Basic Commands
+
 | Command | Description |
 |---------|-------------|
 | `!ping` | Check the bot's latency and responsiveness |
 | `!help` | Display all available commands with descriptions |
 | `!info` | Show information about the bot |
+
+### Server & User Information
+
+| Command | Description |
+|---------|-------------|
 | `!server` | Display information about the current server |
 | `!userinfo [@user]` | Show information about yourself or a mentioned user |
+| `!avatar [@user]` | Display user's avatar in full resolution with download link |
+
+### Fun Commands
+
+| Command | Description |
+|---------|-------------|
+| `!8ball <question>` | Ask the magic 8-ball a question and get a mystical answer |
+| `!roll [dice notation]` | Roll dice using standard notation (e.g., `!roll 2d6`, `!roll 1d20`) |
+| `!coinflip` or `!flip` | Flip a coin - heads or tails |
+
+### Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `!poll <question> \| <option1> \| <option2> \| ...` | Create a poll with up to 10 options. The bot will add number reactions for voting |
+
+### Command Examples
+
+```
+!8ball Will I win the game?
+!roll 2d6
+!roll 1d20
+!coinflip
+!avatar @username
+!poll What should we do? | Play games | Watch a movie | Go outside
+```
 
 ## Project Structure 📁
 

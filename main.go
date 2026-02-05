@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
+	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -28,6 +31,9 @@ func init() {
 	if botPrefix == "" {
 		botPrefix = "!" // Default prefix
 	}
+
+	// Seed random number generator for fun commands
+	rand.Seed(time.Now().UnixNano())
 }
 
 func main() {
@@ -109,6 +115,16 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		handleServerInfo(s, m)
 	case "userinfo":
 		handleUserInfo(s, m, args)
+	case "8ball":
+		handle8Ball(s, m, args)
+	case "roll":
+		handleRoll(s, m, args)
+	case "coinflip", "flip":
+		handleCoinFlip(s, m)
+	case "avatar":
+		handleAvatar(s, m, args)
+	case "poll":
+		handlePoll(s, m, args)
 	default:
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Unknown command: `%s`. Use `%shelp` to see available commands.", command, botPrefix))
 	}
@@ -134,6 +150,11 @@ func handleHelp(s *discordgo.Session, m *discordgo.MessageCreate) {
 		Color:       0x00ff00,
 		Fields: []*discordgo.MessageEmbedField{
 			{
+				Name:   "**🔧 Basic Commands**",
+				Value:  "\u200b",
+				Inline: false,
+			},
+			{
 				Name:   fmt.Sprintf("%sping", botPrefix),
 				Value:  "Check the bot's latency",
 				Inline: false,
@@ -149,6 +170,11 @@ func handleHelp(s *discordgo.Session, m *discordgo.MessageCreate) {
 				Inline: false,
 			},
 			{
+				Name:   "**📊 Server & User Info**",
+				Value:  "\u200b",
+				Inline: false,
+			},
+			{
 				Name:   fmt.Sprintf("%sserver", botPrefix),
 				Value:  "Show information about the current server",
 				Inline: false,
@@ -156,6 +182,41 @@ func handleHelp(s *discordgo.Session, m *discordgo.MessageCreate) {
 			{
 				Name:   fmt.Sprintf("%suserinfo [@user]", botPrefix),
 				Value:  "Show information about yourself or a mentioned user",
+				Inline: false,
+			},
+			{
+				Name:   fmt.Sprintf("%savatar [@user]", botPrefix),
+				Value:  "Display user's avatar in full resolution",
+				Inline: false,
+			},
+			{
+				Name:   "**🎮 Fun Commands**",
+				Value:  "\u200b",
+				Inline: false,
+			},
+			{
+				Name:   fmt.Sprintf("%s8ball <question>", botPrefix),
+				Value:  "Ask the magic 8-ball a question",
+				Inline: false,
+			},
+			{
+				Name:   fmt.Sprintf("%sroll [dice notation]", botPrefix),
+				Value:  "Roll dice (e.g., `1d6`, `2d20`, or just `roll` for 1d6)",
+				Inline: false,
+			},
+			{
+				Name:   fmt.Sprintf("%scoinflip", botPrefix),
+				Value:  "Flip a coin (heads or tails)",
+				Inline: false,
+			},
+			{
+				Name:   "**🛠️ Utility Commands**",
+				Value:  "\u200b",
+				Inline: false,
+			},
+			{
+				Name:   fmt.Sprintf("%spoll <question> | <option1> | <option2> | ...", botPrefix),
+				Value:  "Create a poll with up to 10 options",
 				Inline: false,
 			},
 		},
@@ -301,4 +362,221 @@ func handleUserInfo(s *discordgo.Session, m *discordgo.MessageCreate, args []str
 	}
 
 	s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+// handle8Ball responds with a magic 8-ball answer
+func handle8Ball(s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
+	if len(args) < 2 {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Please ask a question! Usage: `%s8ball <your question>`", botPrefix))
+		return
+	}
+
+	responses := []string{
+		"It is certain.",
+		"It is decidedly so.",
+		"Without a doubt.",
+		"Yes definitely.",
+		"You may rely on it.",
+		"As I see it, yes.",
+		"Most likely.",
+		"Outlook good.",
+		"Yes.",
+		"Signs point to yes.",
+		"Reply hazy, try again.",
+		"Ask again later.",
+		"Better not tell you now.",
+		"Cannot predict now.",
+		"Concentrate and ask again.",
+		"Don't count on it.",
+		"My reply is no.",
+		"My sources say no.",
+		"Outlook not so good.",
+		"Very doubtful.",
+	}
+
+	question := strings.Join(args[1:], " ")
+	answer := responses[rand.Intn(len(responses))]
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "🎱 Magic 8-Ball",
+		Description: fmt.Sprintf("**Question:** %s\n\n**Answer:** %s", question, answer),
+		Color:       0x8b00ff,
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("Asked by %s", m.Author.Username),
+		},
+	}
+
+	s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+// handleRoll rolls dice using standard dice notation (e.g., 2d6, 1d20)
+func handleRoll(s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
+	diceNotation := "1d6" // Default
+	if len(args) > 1 {
+		diceNotation = strings.ToLower(args[1])
+	}
+
+	// Parse dice notation (e.g., "2d6" means 2 dice with 6 sides each)
+	re := regexp.MustCompile(`^(\d+)d(\d+)$`)
+	matches := re.FindStringSubmatch(diceNotation)
+
+	if matches == nil {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Invalid dice notation! Use format like `1d6`, `2d20`, etc. Usage: `%sroll [XdY]`", botPrefix))
+		return
+	}
+
+	numDice, _ := strconv.Atoi(matches[1])
+	numSides, _ := strconv.Atoi(matches[2])
+
+	// Sanity checks
+	if numDice < 1 || numDice > 100 {
+		s.ChannelMessageSend(m.ChannelID, "Please roll between 1 and 100 dice!")
+		return
+	}
+	if numSides < 2 || numSides > 1000 {
+		s.ChannelMessageSend(m.ChannelID, "Please use dice with 2 to 1000 sides!")
+		return
+	}
+
+	// Roll the dice
+	rolls := make([]int, numDice)
+	total := 0
+	for i := 0; i < numDice; i++ {
+		rolls[i] = rand.Intn(numSides) + 1
+		total += rolls[i]
+	}
+
+	// Format the results
+	rollsStr := ""
+	if numDice <= 20 {
+		// Show individual rolls if not too many
+		rollsStrs := make([]string, numDice)
+		for i, roll := range rolls {
+			rollsStrs[i] = fmt.Sprintf("%d", roll)
+		}
+		rollsStr = fmt.Sprintf("\n**Rolls:** %s", strings.Join(rollsStrs, ", "))
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "🎲 Dice Roll",
+		Description: fmt.Sprintf("**Dice:** %s%s\n**Total:** %d", diceNotation, rollsStr, total),
+		Color:       0xff6347,
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("Rolled by %s", m.Author.Username),
+		},
+	}
+
+	s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+// handleCoinFlip flips a coin
+func handleCoinFlip(s *discordgo.Session, m *discordgo.MessageCreate) {
+	result := "Heads"
+	emoji := "🪙"
+	if rand.Intn(2) == 1 {
+		result = "Tails"
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("%s Coin Flip", emoji),
+		Description: fmt.Sprintf("The coin landed on: **%s**!", result),
+		Color:       0xffd700,
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("Flipped by %s", m.Author.Username),
+		},
+	}
+
+	s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+// handleAvatar displays a user's avatar in full resolution
+func handleAvatar(s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
+	var targetUser *discordgo.User
+
+	// If a user is mentioned, get their avatar; otherwise, use the message author
+	if len(m.Mentions) > 0 {
+		targetUser = m.Mentions[0]
+	} else {
+		targetUser = m.Author
+	}
+
+	avatarURL := targetUser.AvatarURL("1024")
+
+	embed := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("🖼️ %s's Avatar", targetUser.Username),
+		Color:       0x00bfff,
+		Image:       &discordgo.MessageEmbedImage{URL: avatarURL},
+		Description: fmt.Sprintf("[Download Link](%s)", avatarURL),
+		Timestamp:   time.Now().Format(time.RFC3339),
+	}
+
+	s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+// handlePoll creates a simple poll with reactions
+func handlePoll(s *discordgo.Session, m *discordgo.MessageCreate, args []string) {
+	if len(args) < 2 {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Please provide a question and options! Usage: `%spoll <question> | <option1> | <option2> | ...`", botPrefix))
+		return
+	}
+
+	// Join all args and split by pipe
+	content := strings.Join(args[1:], " ")
+	parts := strings.Split(content, "|")
+
+	if len(parts) < 3 {
+		s.ChannelMessageSend(m.ChannelID, "Please provide at least a question and 2 options separated by `|`")
+		return
+	}
+
+	question := strings.TrimSpace(parts[0])
+	options := make([]string, 0)
+	for i := 1; i < len(parts) && i <= 10; i++ {
+		option := strings.TrimSpace(parts[i])
+		if option != "" {
+			options = append(options, option)
+		}
+	}
+
+	if len(options) < 2 {
+		s.ChannelMessageSend(m.ChannelID, "Please provide at least 2 options!")
+		return
+	}
+
+	if len(options) > 10 {
+		s.ChannelMessageSend(m.ChannelID, "Maximum 10 options allowed!")
+		return
+	}
+
+	// Number emojis for reactions
+	numberEmojis := []string{"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"}
+
+	// Build poll description
+	pollDescription := ""
+	for i, option := range options {
+		pollDescription += fmt.Sprintf("%s %s\n", numberEmojis[i], option)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "📊 " + question,
+		Description: pollDescription,
+		Color:       0x3498db,
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: fmt.Sprintf("Poll created by %s", m.Author.Username),
+		},
+	}
+
+	msg, err := s.ChannelMessageSendEmbed(m.ChannelID, embed)
+	if err != nil {
+		return
+	}
+
+	// Add reactions to the poll
+	for i := 0; i < len(options); i++ {
+		s.MessageReactionAdd(m.ChannelID, msg.ID, numberEmojis[i])
+	}
 }
